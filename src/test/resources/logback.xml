@@ -9,7 +9,11 @@
         </encoder>
     </appender>
 
-    <logger name="de.flapdoodle.embed" level="INFO" additivity="false">
+    <logger name="de.flapdoodle.embed" level="DEBUG" additivity="false">
+            <appender-ref ref="STDOUT" />
+    </logger>
+
+    <logger name="com.mongodb" level="DEBUG" additivity="false">
             <appender-ref ref="STDOUT" />
     </logger>
 
