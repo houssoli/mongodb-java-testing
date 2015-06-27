@@ -49,22 +49,22 @@ public class MongoDbIntegrationTest {
     private static final String BOOK3_TITLE = "Anemic Domain Model and why I love it";
 
     // admin
-    private final String userAdmin = "siteUserAdmin";
-    private final String passwordAdmin = "password";
-    private final Object[] roleUserAdminAnyDatabase = new Object[] { "userAdminAnyDatabase" };
-    private final String adminDatabase = "admin";
+    private static final String userAdmin = "siteUserAdmin";
+    private static final String passwordAdmin = "password";
+    private static final Object[] roleUserAdminAnyDatabase = new Object[] { "userAdminAnyDatabase" };
+    private static final String adminDatabase = "admin";
 
     // bus mongodb main user
-    private final String busUserName = "mongodbBusUsername";
-    private final String busUserPassword = "mongodbBusPassword";
-    private final Object[] busUserRole = new Object[] { "readWrite", "dbAdmin" };
-    private final String busDatabase = "mongodbbusesb";
-    private final String busCollectionNameAom = "actsofmanagement";
-    private final String busCollectionNameRpt = "report";
+    private static final String busUserName = "mongodbBusUsername";
+    private static final String busUserPassword = "mongodbBusPassword";
+    private static final Object[] busUserRole = new Object[] { "readWrite", "dbAdmin" };
+    private static final String busDatabase = "mongodbbusesb";
+    private static final String busCollectionNameAom = "actsofmanagement";
+    private static final String busCollectionNameRpt = "report";
 
     // bus mongodb reporting user
-    private final String busReportUserName = "mongodbReportUsername";
-    private final String busReportUserPassword = "mongodbReportPassword";
+    private static final String busReportUserName = "mongodbReportUsername";
+    private static final String busReportUserPassword = "mongodbReportPassword";
 
     private static MongoDBUtilsTestsFactory factory;
     private MongoClient mongo;
@@ -73,6 +73,12 @@ public class MongoDbIntegrationTest {
     public static void setUpBeforeClass() throws Exception {
         if (factory == null) {
             factory = MongoDBUtilsTestsFactory.with(MongoDBUtilsTestsFactory.VersionEnum.V2_4_14);
+
+            // ///////////////////////////////////////////////////
+            populateUserAdminDatabase();
+
+            // //////////////////////////////////////////////////////////
+            populateBusesbUserBusDatabase();
         }
     }
 
@@ -91,25 +97,32 @@ public class MongoDbIntegrationTest {
         setUpMongo();
     }
 
+    @After
+    public void teardown() throws Exception {
+        closeMongoClient(mongo);
+    }
+
     private void setUpMongo() throws IOException, UnknownHostException, MongoException, MongoException {
-
-        // ///////////////////////////////////////////////////
         mongo = factory.createMongoClient();
+    }
+
+    private static void populateUserAdminDatabase() throws UnknownHostException {
+        MongoClient mongoClient = factory.createMongoClient();
 
         // ///////////////////////////////////////////////////
-        DB mongoGetDBAdmin = mongo.getDB(adminDatabase);
+        DB mongoGetDBAdmin = mongoClient.getDB(adminDatabase);
         LOGGER.debug("mongoGetDBAdmin => {}", mongoGetDBAdmin);
         // create Administrator
         // DBObject lookupUserAdmin = findOneUser(mongoGetDBAdmin, userAdmin);
         // if (lookupUserAdmin == null) { // check if exists before creation of Administrator
-            DBObject dboCreateAdministrator = new BasicDBObject("user", userAdmin).append("pwd", passwordAdmin).append("roles",
-                    roleUserAdminAnyDatabase);
-            String cmdCreateAdministrator = String.format("db.addUser(%s)", dboCreateAdministrator);
-            LOGGER.debug("createAdministrator Request => {}", cmdCreateAdministrator);
-            // Object createAdministratorCommandResult = mongoGetDBAdmin.eval(cmdCreateAdministrator, new Object[] {});
+        DBObject dboCreateAdministrator = new BasicDBObject("user", userAdmin).append("pwd", passwordAdmin).append("roles",
+                roleUserAdminAnyDatabase);
+        String cmdCreateAdministrator = String.format("db.addUser(%s)", dboCreateAdministrator);
+        LOGGER.debug("createAdministrator Request => {}", cmdCreateAdministrator);
+        // Object createAdministratorCommandResult = mongoGetDBAdmin.eval(cmdCreateAdministrator, new Object[] {});
 
-            Object createAdministratorCommandResult = mongoGetDBAdmin.addUser(userAdmin, passwordAdmin.toCharArray());
-            LOGGER.debug("admin, db.addUser() commandResult => {}", createAdministratorCommandResult);
+        Object createAdministratorCommandResult = mongoGetDBAdmin.addUser(userAdmin, passwordAdmin.toCharArray());
+        LOGGER.debug("admin, db.addUser() commandResult => {}", createAdministratorCommandResult);
         // }
 
         // authenticate Administrator
@@ -126,22 +139,22 @@ public class MongoDbIntegrationTest {
             LOGGER.debug("{}, user['{}'] ==========> {}", mongoGetDBAdmin.getName(), obj.get("user"), obj);
         }
 
-        // //////////////////////////////////////////////////////////
-        // TODO xxx
-        mongo.close();
+        mongoClient.close();
+    }
 
+    private static void populateBusesbUserBusDatabase() throws UnknownHostException {
         List<MongoCredential> credentialList = Arrays.asList(new MongoCredential[] { MongoCredential.createMongoCRCredential(userAdmin,
                 adminDatabase, passwordAdmin.toCharArray()) });
-        mongo = factory.createMongoClient(credentialList);
+        MongoClient mongoClient = factory.createMongoClient(credentialList);
 
-        DB mongoGetBusDatabase = mongo.getDB(busDatabase);
+        DB mongoGetBusDatabase = mongoClient.getDB(busDatabase);
         LOGGER.debug("mongoGetBusDatabase => {}", mongoGetBusDatabase);
         // ////////////////////////////////////////////////////
         {
             // DBObject lookupBusUserExists = findOneUser(mongoGetBusDatabase, busUserName);
             // if (lookupBusUserExists == null) {// check if exists before creation of busUser
-                WriteResult createBusUserCommandResult = mongoGetBusDatabase.addUser(busUserName, busUserPassword.toCharArray());
-                LOGGER.debug("{}, db.addUser() commandResult => {}", mongoGetBusDatabase, createBusUserCommandResult);
+            WriteResult createBusUserCommandResult = mongoGetBusDatabase.addUser(busUserName, busUserPassword.toCharArray());
+            LOGGER.debug("{}, db.addUser() commandResult => {}", mongoGetBusDatabase, createBusUserCommandResult);
             // }
 
             DBObject cmdGetUserBusResult = findOneUser(mongoGetBusDatabase, busUserName);
@@ -153,39 +166,43 @@ public class MongoDbIntegrationTest {
                 LOGGER.debug("{}, user['{}'] ==========> {}", mongoGetBusDatabase.getName(), obj.get("user"), obj);
             }
         }
+        mongoClient.close();
+    }
 
-        // //////////////////////////////////////////////////////////
-        // close and re-authenticate and the add new user
-        mongo.close();
-        mongo = factory.createMongoClient();
-        mongoGetBusDatabase = mongo.getDB(busDatabase);
+    private void populateReportUserBusDatabase() throws UnknownHostException {
+        MongoClient mongoClient = factory.createMongoClient();
+        DB mongoGetBusDatabase = mongoClient.getDB(busDatabase);
         Object userBusAuthenticateCommandResult = mongoGetBusDatabase.authenticateCommand(busUserName, busUserPassword.toCharArray());
         LOGGER.debug("userBusAuthenticateCommandResult => {}", userBusAuthenticateCommandResult);
         // make the BusUser to add a BusReportUser
         if (mongoGetBusDatabase.authenticate(busUserName, busUserPassword.toCharArray())) {
             WriteResult addUserWriteResult = mongoGetBusDatabase.addUser(busReportUserName, busReportUserPassword.toCharArray());
         }
-
-        // //////////////////////////////////////////////////////////
-        // close and authenticate the BusReportUser in order to write some reports
-        DBCollection collection = null;
-        Set<String> collectionNames = null;
-        mongo.close();
-        mongo = factory.createMongoClient();
-        DB db = mongo.getDB(busDatabase);
-        CommandResult authenticateUserReportCommand = db.authenticateCommand(busReportUserName, busReportUserPassword.toCharArray());
-        LOGGER.debug("authenticateUserReportCommand => {}", authenticateUserReportCommand);
-
-        collection = db.collectionExists(busCollectionNameRpt) ? db.getCollection(busCollectionNameRpt) : db.createCollection(
-                busCollectionNameRpt, new BasicDBObject());
-        collectionNames = db.getCollectionNames();
-
-        assertThat(collectionNames, hasItem(busCollectionNameRpt));
-        assertThat(collection.find().size(), equalTo(0));
-
+        mongoClient.close();
     }
 
-    private Iterator<DBObject> findUsers(final DB db) {
+    private void populateSomeReportData() throws UnknownHostException {
+        DBCollection collection = null;
+        Set<String> collectionNames = null;
+
+        MongoClient mongoClient = factory.createMongoClient();
+        DB db = mongoClient.getDB(busDatabase);
+        try {
+            CommandResult authenticateUserReportCommand = db.authenticateCommand(busReportUserName, busReportUserPassword.toCharArray());
+            LOGGER.debug("authenticateUserReportCommand => {}", authenticateUserReportCommand);
+
+            collection = db.collectionExists(busCollectionNameRpt) ? db.getCollection(busCollectionNameRpt) : db.createCollection(
+                    busCollectionNameRpt, new BasicDBObject());
+            collectionNames = db.getCollectionNames();
+
+            assertThat(collectionNames, hasItem(busCollectionNameRpt));
+            assertThat(collection.find().size(), equalTo(0));
+        } finally {
+            mongoClient.close();
+        }
+    }
+
+    private static Iterator<DBObject> findUsers(final DB db) {
         DBCursor resultSetCursor = db.getCollection("system.users").find();
         LOGGER.debug("{}, db.system.users.find() => {}", db.getName(), resultSetCursor);
         int i = 0;
@@ -196,18 +213,27 @@ public class MongoDbIntegrationTest {
         return resultSetCursor.iterator();
     }
 
-    private DBObject findOneUser(final DB db, final String username) {
+    private static DBObject findOneUser(final DB db, final String username) {
         DBObject criteria = new BasicDBObject("user", username);
         DBObject result = db.getCollection("system.users").findOne(criteria);
         LOGGER.debug("{}, db.system.users.findOne({}) => {}", db.getName(), criteria, result);
         return result;
     }
 
-    @After
-    public void teardown() throws Exception {
-        if (mongo != null) {
-            mongo.close();
+    private static void closeMongoClient(MongoClient mongoClient) {
+        if (mongoClient != null) {
+            mongoClient.close();
         }
+    }
+
+    @Test
+    public void shouldInsertReports() throws UnknownHostException {
+        // //////////////////////////////////////////////////////////
+        populateReportUserBusDatabase();
+
+        // //////////////////////////////////////////////////////////
+        // authenticate the BusReportUser in order to write some reports
+        populateSomeReportData();
     }
 
     @Test
