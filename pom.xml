@@ -13,6 +13,13 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <tagNameFormat>@{project.version}</tagNameFormat>
+
+        <coverage.reports.dir>${basedir}/target/coverage-reports</coverage.reports.dir>
+        <sonar.jacoco.reportPath>${coverage.reports.dir}/jacoco-unit.exec</sonar.jacoco.reportPath>
+        <sonar.jacoco.itReportPath>${coverage.reports.dir}/jacoco-it.exec</sonar.jacoco.itReportPath>
+        <sonar.jacoco.jar>${basedir}/lib/jacocoagent.jar</sonar.jacoco.jar>
+
+        <integrationSourceDirectory>${basedir}/src/integrationtest</integrationSourceDirectory>
     </properties>
 
     <dependencies>
@@ -58,11 +65,12 @@
     </dependencies>
 
     <build>
+        <finalName>${project.artifactId}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.2</version>
+                <version>3.3</version>
                 <configuration>
                     <source>1.7</source>
                     <target>1.7</target>
@@ -75,6 +83,18 @@
                     <debuglevel>${javac.debuglevel}</debuglevel>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.18.1</version>
+                <configuration>
+                    <argLine>-javaagent:${sonar.jacoco.jar}=destfile=${sonar.jacoco.reportPath},append=false,includes=com.dbc.*</argLine>
+                   <!-- <groups>com.hascode.tutorial.junit.categories.UnitTest</groups> -->
+                   <excludedGroups>com.hascode.tutorial.junit.categories.IntegrationTest</excludedGroups>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>com.github.joelittlejohn.embedmongo</groupId>
                 <artifactId>embedmongo-maven-plugin</artifactId>
@@ -86,14 +106,14 @@
                             <goal>start</goal>
                         </goals>
                         <configuration>
-                            <port>37017</port>
+                            <port>27017</port>
                             <!-- optional, default 27017 -->
 
                             <randomPort>true</randomPort>
                             <!-- optional, default is false, if true allocates a random port and 
                                 overrides embedmongo.port -->
 
-                            <version>3.0.2</version>
+                            <version>2.4.14</version>
                             <!-- optional, default 2.2.1 -->
 
                             <databaseDirectory>${project.build.directory}/mongo-data/db</databaseDirectory>
@@ -142,4 +162,130 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>it</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>create-directory-and-copy-resources</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <tasks>
+                                        <echo
+                                            message="Creating Directory ${integrationOutputDirectory}" />
+                                        <mkdir
+                                            dir="${integrationOutputDirectory}" />
+                                    </tasks>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>1.9.1</version>
+                        <executions>
+                            <execution>
+                                <id>add-test-sources</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>add-test-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>${integrationSourceDirectory}/java</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>add-test-resources</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>add-test-resource</goal>
+                                </goals>
+                                <configuration>
+                                    <resources>
+                                        <resource>
+                                            <directory>${integrationSourceDirectory}/java</directory>
+                                            <targetPath>${integrationOutputDirectory}</targetPath>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.3</version>
+                        <executions>
+                            <execution>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>testCompile</goal>
+                                </goals>
+                                <configuration>
+                                    <compilerVersion>1.7</compilerVersion>
+                                    <compilerArguments>
+                                        <d>${integrationOutputDirectory}</d>
+                                    </compilerArguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>2.18.1</version>
+                        <configuration>
+                            <argLine>-javaagent:${sonar.jacoco.jar}=destfile=${sonar.jacoco.itReportPath},append=false,includes=com.dbc.*</argLine>
+                            <testClassesDirectory>${integrationOutputDirectory}</testClassesDirectory>
+                            <reportsDirectory>${integrationOutputDirectory}/failsafe-reports</reportsDirectory>
+                            <additionalClasspathElements>
+                                <additionalClasspathElement>${integrationSourceDirectory}/resources</additionalClasspathElement>
+                            </additionalClasspathElements>
+                            <groups>com.hascode.tutorial.junit.categories.IntegrationTest</groups>
+                            <!-- <excludedGroups>com.hascode.tutorial.junit.categories.UnitTest</excludedGroups> -->
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                </goals>
+                                <configuration>
+                                    <includes>
+                                        <include>**/*.class</include>
+                                    </includes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+            <properties>
+                <integrationSourceDirectory>${basedir}/src/integrationtest</integrationSourceDirectory>
+                <integrationOutputDirectory>${basedir}/target/integrationtest-classes</integrationOutputDirectory>
+            </properties>
+        </profile>
+        <profile>
+            <id>sonar</id>
+            <build>
+                <plugins>
+                </plugins>
+            </build>
+            <properties>
+                <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+                <sonar.core.codeCoveragePlugin>jacoco</sonar.core.codeCoveragePlugin>
+            </properties>
+        </profile>
+    </profiles>
 </project>

@@ -1,4 +1,4 @@
-package fr.soat.houssoli.mongo;
+package com.hascode.tutorial.mongo;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -19,10 +19,13 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+import com.hascode.tutorial.junit.categories.UnitTest;
+import com.hascode.tutorial.mongo.utils.MongoDBUtilsTestsFactory;
 import com.mongodb.BasicDBObject;
 import com.mongodb.CommandResult;
 import com.mongodb.DB;
@@ -36,8 +39,7 @@ import com.mongodb.MongoCredential;
 import com.mongodb.MongoException;
 import com.mongodb.WriteResult;
 
-import fr.soat.houssoli.mongo.utils.MongoDBUtilsTestsFactory;
-
+@Category(UnitTest.class)
 public class MongoDbIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoDbIntegrationTest.class);
 
