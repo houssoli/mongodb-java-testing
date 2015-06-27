@@ -84,8 +84,9 @@ public class MongoDBUtilsTestsFactory {
      *
      */
     public static enum VersionEnum implements IFeatureAwareVersion {
-        V2_6_LATEST("v2.6-latest", Feature.SYNC_DELAY), // v2.6-latest
-        V2_6_10("2.6.10", Feature.SYNC_DELAY); // "2.6.10"
+        V2_4_14("2.4.14", Feature.SYNC_DELAY), // "2.4.14"
+        V2_6_10("2.6.10", Feature.SYNC_DELAY), // "2.6.10"
+        V2_6_LATEST("v2.6-latest", Feature.SYNC_DELAY); // v2.6-latest
 
         private final String specificVersion;
         private final EnumSet<Feature> features;
@@ -187,9 +188,9 @@ public class MongoDBUtilsTestsFactory {
         // MongodConfigBuilder
         final MongodConfigBuilder mongodConfigBuilder = createMongodConfigBuilder(version);
         mongodConfigBuilder.cmdOptions(new MongoCmdOptionsBuilder().enableAuth(false).build());
-        mongodConfigBuilder.setParameter("authenticationMechanisms", "MONGODB-CR");
 
         // TODO mongodConfigBuilder.setParameter Key="authenticationMechanisms", value="MONGODB-CR" | "SCRAM-SHA-1" | "PLAIN"
+        // mongodConfigBuilder.setParameter("authenticationMechanisms", "MONGODB-CR");
         // Net net = null;
         // TODO mongodConfigBuilder.net(net);
         // IMongoProcessListener processListener = null;
